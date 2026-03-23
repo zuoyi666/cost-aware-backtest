@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cost-aware-backtest"
+version = "0.1.0"
+description = "Cost-aware intraday backtest template aligned with news-to-signal conventions"
+requires-python = ">=3.9"
+dependencies = [
+  "matplotlib>=3.7",
+  "numpy>=1.24",
+  "pandas>=2.0",
+  "PyYAML>=6.0",
+  "pytest>=8.0"
+]

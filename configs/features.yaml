@@ -1,0 +1,14 @@
+features:
+  signal_name: signal_news_momentum
+  signal_version: v1
+  horizon: 3bars
+  source: news-to-signal
+  schema:
+    required_columns:
+      - timestamp
+      - asset
+      - signal_value
+      - signal_name
+      - signal_version
+      - horizon
+      - source

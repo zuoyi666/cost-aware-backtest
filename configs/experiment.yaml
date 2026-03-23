@@ -1,0 +1,23 @@
+experiment:
+  name: baseline
+  run_name: ""
+  synthetic: false
+  skip_preprocess: true
+  output:
+    root: artifacts/runs
+    include:
+      run_config: true
+      metrics_json: true
+      summary_md: true
+      run_tables: true
+      reports: true
+      figures: true
+      signals_parquet: true
+      signals_csv: true
+      fills: true
+      portfolio_timeseries: true
+  reproducibility:
+    random_seed: 42
+    force_deterministic: true
+  report:
+    keep_top_n: 3

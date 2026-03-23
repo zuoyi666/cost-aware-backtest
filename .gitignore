@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Build and packaging
+build/
+dist/
+*.egg-info/
+
+# Environments
+.env
+.venv/
+venv/
+env/
+
+# Editors and OS files
+.DS_Store
+.idea/
+.vscode/
+.ipynb_checkpoints/
+
+# Local working notes
+task_plan.md
+findings.md
+progress.md
+
+# Generated research outputs
+artifacts/runs/*
+!artifacts/runs/README.md
+
+# Local data staging areas
+data/raw/*
+!data/raw/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
+
+# Optional local binary data exports
+data/processed/*.parquet
+data/processed/*.feather
+data/processed/*.pkl

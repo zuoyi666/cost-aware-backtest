@@ -1,0 +1,14 @@
+data:
+  universe_type: sample_intraday
+  signal_adapter: auto
+  signal_path: data/processed/sample_signals.csv
+  market_data_path: data/processed/sample_market_data.csv
+  signal_format: auto
+  market_data_format: auto
+  timezone: UTC
+  start: ""
+  end: ""
+
+paths:
+  figures_dir: artifacts/runs/{run_name}/figures
+  tables_dir: artifacts/runs/{run_name}/tables
