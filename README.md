@@ -29,13 +29,13 @@ This repo is intentionally small. It is an MVP focused on clarity, reproducibili
 
 Upstream repository link:
 
-- `REPLACE_ME`: `https://github.com/<YOUR_GITHUB_USERNAME>/news-to-signal`
+- [news-to-signal](https://github.com/zuoyi666/news-to-signal)
 
-The intended workflow is:
+## End-to-End Workflow
 
-1. Run `news-to-signal` and export a standardized signal file.
-2. Point this repo at that exported signal.
-3. Run a cost-aware backtest and compare net results across experiments.
+1. Research and construct standardized signals in `news-to-signal`.
+2. Export a standardized run artifact under `artifacts/runs/exp_YYYYMMDD_name/`.
+3. Consume that artifact here for cost-aware validation under explicit portfolio construction and execution assumptions.
 
 The integration is kept deliberately small:
 
@@ -58,6 +58,7 @@ Adapter behavior:
 - resolves a run directory into the exported signal file automatically
 - preserves the standardized column contract
 - coerces `horizon` into the backtest repo's filter-friendly string representation
+- fails fast on malformed required values or duplicate downstream signal keys
 
 Example upstream-backed run:
 
@@ -93,6 +94,8 @@ Preferred storage format:
 - CSV fallback when parquet is unavailable
 
 The backtest repo treats this schema as the stable contract between upstream signal research and downstream execution research.
+
+Path resolution and light type normalization are handled in the adapter layer. Malformed required values or duplicate downstream signal keys are treated as contract violations rather than repaired silently.
 
 ## Market data contract
 
@@ -198,6 +201,8 @@ Files that should stay local:
 - raw data drops under `data/raw/`
 - intermediate data products under `data/interim/`
 - large local binary exports
+
+This mirrors the upstream `news-to-signal` publishing policy: keep the artifact contract documentation, keep per-run outputs local by default.
 
 See [GITHUB_PUBLISH_CHECKLIST.md](GITHUB_PUBLISH_CHECKLIST.md) for a short pre-push checklist.
 

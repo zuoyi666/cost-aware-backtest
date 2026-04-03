@@ -1,4 +1,5 @@
 import pandas as pd
+import pytest
 
 from src.utils.signal_schema import REQUIRED_SIGNAL_COLUMNS, to_standard_signal_long_format, validate_standard_signal_schema
 
@@ -21,7 +22,7 @@ def test_standard_signal_schema_shape():
     assert len(out) == 4
 
 
-def test_validate_standard_signal_schema_deduplicates():
+def test_validate_standard_signal_schema_rejects_duplicate_keys():
     df = pd.DataFrame(
         [
             {
@@ -44,6 +45,5 @@ def test_validate_standard_signal_schema_deduplicates():
             },
         ]
     )
-    out = validate_standard_signal_schema(df)
-    assert len(out) == 1
-    assert out.loc[0, "signal_value"] == 2.0
+    with pytest.raises(ValueError, match="duplicate downstream signal keys"):
+        validate_standard_signal_schema(df)

@@ -4,6 +4,8 @@ Each experiment run writes into:
 
 `artifacts/runs/exp_YYYYMMDD_name/`
 
+This mirrors the upstream `news-to-signal` export convention so a completed upstream run directory can be handed off directly into this repo.
+
 Minimum standardized outputs:
 
 - `run_config.yaml`

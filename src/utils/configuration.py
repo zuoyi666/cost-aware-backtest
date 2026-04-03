@@ -43,7 +43,7 @@ def load_pipeline_config(
     config = _load_config_bundle(config_dir)
     config = _deep_merge(config, overrides or {})
 
-    project_root = Path.cwd()
+    project_root = Path.cwd().resolve()
     config.setdefault("project_root", str(project_root))
     config.setdefault("environment", {})
     config["environment"]["pwd"] = str(project_root)

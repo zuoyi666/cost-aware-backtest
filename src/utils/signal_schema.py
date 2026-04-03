@@ -39,30 +39,25 @@ def validate_standard_signal_schema(df: pd.DataFrame) -> pd.DataFrame:
         raise ValueError(f"Missing required signal columns: {missing}")
 
     out = df.copy()
-    out["timestamp"] = pd.to_datetime(out["timestamp"], utc=False).dt.tz_localize(None)
-    out["asset"] = out["asset"].astype(str)
-    out["signal_name"] = out["signal_name"].astype(str)
-    out["signal_version"] = out["signal_version"].astype(str)
-    out["horizon"] = out["horizon"].astype(str)
-    out["source"] = out["source"].astype(str)
+    out["timestamp"] = pd.to_datetime(out["timestamp"], errors="coerce", utc=False).dt.tz_localize(None)
+    out["asset"] = out["asset"].astype("string").str.strip()
+    out["signal_name"] = out["signal_name"].astype("string").str.strip()
+    out["signal_version"] = out["signal_version"].astype("string").str.strip()
+    out["horizon"] = out["horizon"].astype("string").str.strip()
+    out["source"] = out["source"].astype("string").str.strip()
     out["signal_value"] = pd.to_numeric(out["signal_value"], errors="coerce")
-    out = out.dropna(subset=["timestamp", "asset", "signal_value"])
 
-    dedupe_cols = [
-        "timestamp",
-        "asset",
-        "signal_name",
-        "signal_version",
-        "horizon",
-        "source",
-    ]
-    out = (
-        out.groupby(dedupe_cols, as_index=False)["signal_value"]
-        .mean()
-        .sort_values(["timestamp", "asset", "signal_name"])
-        .reset_index(drop=True)
-    )
-    return out[REQUIRED_SIGNAL_COLUMNS]
+    invalid_mask = out[REQUIRED_SIGNAL_COLUMNS].isnull().any(axis=1)
+    if invalid_mask.any():
+        raise ValueError(
+            "Signal export contains null or invalid values in required columns."
+        )
+
+    duplicate_keys = ["timestamp", "asset", "signal_name", "signal_version", "horizon", "source"]
+    if out.duplicated(duplicate_keys).any():
+        raise ValueError("Signal export contains duplicate downstream signal keys.")
+
+    return out.sort_values(["timestamp", "asset", "signal_name"]).reset_index(drop=True)[REQUIRED_SIGNAL_COLUMNS]
 
 
 def load_standard_signal_frame(path: str | Path, file_format: str = "auto") -> pd.DataFrame:
