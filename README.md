@@ -4,6 +4,8 @@ Config-driven, cost-aware backtesting for standardized cross-sectional equity si
 
 This repository is the downstream execution layer for signal research projects such as `news-to-signal`. It ingests standardized signal files, applies a simple but explicit portfolio construction and execution model, and writes reproducible run artifacts for comparison across experiments.
 
+> **Status:** prototype, kept for correctness fixes only. Follow-up research happens in a separate project, [Quant Research Lab (QRL)](#relationship-to-quant-research-lab-qrl). This repository makes no performance claims.
+
 ## What this project does
 
 - reads external signals using a standardized long-format schema
@@ -30,6 +32,34 @@ This repo is intentionally small. It is an MVP focused on clarity, reproducibili
 Upstream repository link:
 
 - [news-to-signal](https://github.com/zuoyi666/news-to-signal)
+
+## Relationship to Quant Research Lab (QRL)
+
+Quant Research Lab (QRL) is a separate follow-up project. It redesigns signal research and backtesting under a research charter written before any results were seen. QRL does not reuse this code. Two ideas from this repository are planned to enter QRL as robustness checks defined before any results: execution delay (+1/+2 sessions) and spread/impact cost stress. QRL's fixed primary cost assumption stays unchanged.
+
+| Topic | cost-aware-backtest (this repo) | QRL |
+|---|---|---|
+| Holding and timing | Configurable delay and holding period in bars; by default enter at the open and exit at the close | Enter at the open of t+1, exit at the open of t+6 (five trading intervals) |
+| Overlapping positions | Each cohort trades on its own: no netting across cohorts, no weight drift | Five overlapping daily sleeves held in shares (they drift), netted at the security level |
+| Execution costs | Commission, slippage, spread and an optional volume-based impact cost, charged as a round trip on each cohort's target weight | 10 bps one-way on net traded notional, plus a sensitivity grid |
+| Shorting and income | Price returns only: no dividends, short borrow cost or dividend payment-in-lieu | Ordinary dividends kept as cash; 50 bps a year borrow by calendar day; dividends owed on shorts booked separately |
+| Validation | Robustness scenarios, all reported | Purged walk-forward, an untouched lockbox, Newey-West inference, negative controls and coded decision rules |
+
+What carried over:
+
+- This repository reports every robustness scenario rather than the best one. QRL applies the same discipline through its experiment registry.
+- Round-trip costs charged per cohort overstate costs when signals persist. That is why QRL nets overlapping sleeves before charging costs.
+
+QRL's repository is currently private.
+
+### Known limitations at a glance
+
+- No netting across overlapping cohorts and no weight drift, so costs are conservative.
+- Price returns only: no dividends, short borrow cost or payment-in-lieu.
+- Deterministic sample and fixture data, not exchange-quality history.
+- One signal per run; outputs illustrate the mechanics and are not performance claims.
+
+Details are under [Current limitations](#current-limitations) below.
 
 ## End-to-End Workflow
 
