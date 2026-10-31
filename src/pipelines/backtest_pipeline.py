@@ -144,17 +144,23 @@ def run_robustness_analysis(
     return finalize_robustness_comparison(pd.DataFrame(rows))
 
 
-def _best_robustness_row(robustness_df: pd.DataFrame) -> Dict[str, Any] | None:
-    if robustness_df.empty or "net_sharpe_ratio" not in robustness_df.columns:
-        return None
-    candidates = robustness_df.dropna(subset=["net_sharpe_ratio"]).copy()
-    non_base = candidates[candidates["scenario"] != "base_case"].copy()
-    if not non_base.empty:
-        candidates = non_base
-    if candidates.empty:
-        return None
-    row = candidates.sort_values("net_sharpe_ratio", ascending=False).iloc[0]
-    return row.to_dict()
+def _robustness_lines(robustness_df: pd.DataFrame) -> list[str]:
+    """Every robustness scenario, base case first; none is singled out as the best."""
+    lines = ["## Robustness Scenarios (all reported; base case is primary)"]
+    if robustness_df.empty:
+        return lines + ["- No robustness scenario was produced."]
+    is_variant = robustness_df["scenario"] != "base_case"
+    ordered = robustness_df.assign(_variant=is_variant).sort_values("_variant", kind="stable")
+    for row in ordered.to_dict("records"):
+        status = row.get("status")
+        if isinstance(status, str) and status.startswith("failed"):
+            lines.append(f"- `{row['scenario']}`: {status}")
+        else:
+            lines.append(
+                f"- `{row['scenario']}`: net_sharpe_ratio `{row.get('net_sharpe_ratio')}`, "
+                f"net_total_return `{row.get('net_total_return')}`"
+            )
+    return lines
 
 
 def render_summary_markdown(
@@ -165,7 +171,6 @@ def render_summary_markdown(
     run_cfg = config["run"]
     features_cfg = config.get("features", {})
     run_metadata = metrics_payload.get("run_metadata", {})
-    best_robustness = _best_robustness_row(robustness_df)
 
     lines = [
         "# Experiment Summary",
@@ -190,6 +195,11 @@ def render_summary_markdown(
         f"- slippage_cost: `{metrics_payload['cost_breakdown']['slippage_cost']}`",
         f"- commission_cost: `{metrics_payload['cost_breakdown']['commission_cost']}`",
         "",
+        "## Cost Model Notes",
+        "- Each cohort pays a full round trip on its target weight. Overlapping cohorts are not "
+        "netted against each other and weights do not drift between entry and exit, so with "
+        "persistent signals turnover and costs are overstated (a conservative bias).",
+        "",
         "## Portfolio Diagnostics",
         f"- fills: `{metrics_payload['portfolio_diagnostics']['fills']}`",
         f"- turnover_total: `{metrics_payload['portfolio_diagnostics']['turnover_total']}`",
@@ -207,19 +217,7 @@ def render_summary_markdown(
             ]
         )
 
-    if best_robustness:
-        lines.extend(
-            [
-                "## Best Robustness Scenario",
-                f"- scenario: `{best_robustness['scenario']}`",
-                f"- dimension: `{best_robustness['dimension']}`",
-                f"- value: `{best_robustness['value']}`",
-                f"- net_sharpe_ratio: `{best_robustness['net_sharpe_ratio']}`",
-                f"- net_total_return: `{best_robustness['net_total_return']}`",
-            ]
-        )
-    else:
-        lines.extend(["## Best Robustness Scenario", "- No successful robustness scenario was produced."])
+    lines.extend(_robustness_lines(robustness_df))
 
     return "\n".join(lines) + "\n"
 

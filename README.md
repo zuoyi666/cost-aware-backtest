@@ -209,6 +209,8 @@ See [GITHUB_PUBLISH_CHECKLIST.md](GITHUB_PUBLISH_CHECKLIST.md) for a short pre-p
 ## Current limitations
 
 - The execution model is intentionally simple and transparent, not a full production simulator.
+- Costs are charged as a full round trip on each cohort's target weight. Overlapping cohorts are not netted against each other and weights do not drift between entry and exit, so with persistent signals turnover and costs are overstated (a conservative bias).
+- `summary.md` lists every robustness scenario, with the base case as the primary result; no scenario is singled out as the best.
 - The current sample experiment uses deterministic fixture data rather than historical exchange-quality intraday data.
 - The upstream integration example uses a real `news-to-signal` signal export but a deterministic aligned market-data fixture.
 - One run evaluates one `signal_name` at a time.
