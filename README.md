@@ -39,10 +39,10 @@ Quant Research Lab (QRL) is a separate follow-up project. It redesigns signal re
 
 | Topic | cost-aware-backtest (this repo) | QRL |
 |---|---|---|
-| Holding and timing | Configurable delay and holding period in bars; by default enter at the open and exit at the close | Enter at the open of t+1, exit at the open of t+6 (five trading intervals) |
+| Holding and timing | Configurable delay and holding period in bars; by default enter at the open and exit at the close | Enter at the close of t+1, exit at the close of t+6 (five trading intervals); the original open-to-open timing stays as a pre-registered robustness study |
 | Overlapping positions | Each cohort trades on its own: no netting across cohorts, no weight drift | Five overlapping daily sleeves held in shares (they drift), netted at the security level |
 | Execution costs | Commission, slippage, spread and an optional volume-based impact cost, charged as a round trip on each cohort's target weight | 10 bps one-way on net traded notional, plus a sensitivity grid |
-| Shorting and income | Price returns only: no dividends, short borrow cost or dividend payment-in-lieu | Ordinary dividends kept as cash; 50 bps a year borrow by calendar day; dividends owed on shorts booked separately |
+| Shorting and income | Price returns only: no dividends, short borrow cost or dividend payment-in-lieu | Daily total returns with dividends reinvested on the ex-date, so dividends owed on shorts come through the return; 50 bps a year borrow by calendar day |
 | Validation | Robustness scenarios, all reported | Purged walk-forward, an untouched lockbox, Newey-West inference, negative controls and coded decision rules |
 
 What carried over:
