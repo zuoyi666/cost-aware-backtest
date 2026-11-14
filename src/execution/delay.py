@@ -11,6 +11,17 @@ def resolve_execution_fills(
     market_df: pd.DataFrame,
     execution_cfg: Dict[str, Any],
 ) -> pd.DataFrame:
+    """Turn target weights into fills: enter `delay_bars` bars after the signal bar, exit after
+    `holding_period_bars` bars.
+
+    Timestamps mark bars. A signal stamped with bar t may use information up to the end of
+    bar t, so the default `delay_bars: 1` enters at the next bar's open; `delay_bars: 0` would
+    trade on the signal's own bar and is only safe if the signal is known before that bar opens.
+
+    Fills whose entry or exit price is missing (a halt, a delisting, a gap in the data) are
+    dropped; their number is kept in `fills.attrs["dropped_missing_price"]` and reported in the
+    run's diagnostics, because a dropped exit can hide a loss and unbalances the long-short book.
+    """
     if weights_df.empty:
         return pd.DataFrame()
 
@@ -63,23 +74,24 @@ def resolve_execution_fills(
 
     fills = fills.merge(entry_market, on=["entry_timestamp", "asset"], how="left")
     fills = fills.merge(exit_market, on=["exit_timestamp", "asset"], how="left")
-    fills = fills.dropna(subset=["entry_price", "exit_price"]).copy()
-    if fills.empty:
-        return fills
-
     fills["entry_price"] = pd.to_numeric(fills["entry_price"], errors="coerce")
     fills["exit_price"] = pd.to_numeric(fills["exit_price"], errors="coerce")
+    scheduled = len(fills)
     fills = fills.dropna(subset=["entry_price", "exit_price"]).copy()
+    dropped = scheduled - len(fills)
     if fills.empty:
+        fills.attrs["dropped_missing_price"] = dropped
         return fills
 
     fills["realized_return"] = fills["exit_price"] / fills["entry_price"] - 1.0
     fills["gross_pnl"] = fills["target_weight"] * fills["realized_return"]
     fills["turnover"] = 2.0 * fills["target_weight"].abs()
-    fills["entry_adv"] = fills["entry_adv"].fillna(fills["entry_volume"]).fillna(1.0).replace(0.0, 1.0)
+    fills["entry_adv"] = fills["entry_adv"].fillna(fills["entry_volume"])
     fills["entry_volatility_20d"] = fills["entry_volatility_20d"].fillna(0.0)
     fills["entry_spread_bps"] = fills["entry_spread_bps"].fillna(0.0)
     fills["exit_spread_bps"] = fills["exit_spread_bps"].fillna(0.0)
     fills["bar_gap"] = fills["entry_bar_index"] - fills["signal_bar_index"]
 
-    return fills.sort_values(["entry_timestamp", "asset"]).reset_index(drop=True)
+    fills = fills.sort_values(["entry_timestamp", "asset"]).reset_index(drop=True)
+    fills.attrs["dropped_missing_price"] = dropped
+    return fills

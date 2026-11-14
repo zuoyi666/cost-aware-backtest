@@ -4,7 +4,7 @@ Config-driven, cost-aware backtesting for standardized cross-sectional equity si
 
 This repository is the downstream execution layer for signal research projects such as `news-to-signal`. It ingests standardized signal files, applies a simple but explicit portfolio construction and execution model, and writes reproducible run artifacts for comparison across experiments.
 
-> **Status:** prototype, kept for correctness fixes only. Follow-up research happens in a separate project, [Quant Research Lab (QRL)](#relationship-to-quant-research-lab-qrl). This repository makes no performance claims.
+> **Status:** a finished prototype. It makes no performance claims: the bundled data is a small fixture built to exercise the pipeline.
 
 ## What this project does
 
@@ -33,33 +33,22 @@ Upstream repository link:
 
 - [news-to-signal](https://github.com/zuoyi666/news-to-signal)
 
-## Relationship to Quant Research Lab (QRL)
+## Known limitations at a glance
 
-Quant Research Lab (QRL) is a separate follow-up project. It redesigns signal research and backtesting under a research charter written before any results were seen. QRL does not reuse this code. Two ideas from this repository are planned to enter QRL as robustness checks defined before any results: execution delay (+1/+2 sessions) and spread/impact cost stress. QRL's fixed primary cost assumption stays unchanged.
-
-| Topic | cost-aware-backtest (this repo) | QRL |
-|---|---|---|
-| Holding and timing | Configurable delay and holding period in bars; by default enter at the open and exit at the close | Enter at the close of t+1, exit at the close of t+6 (five trading intervals); the original open-to-open timing stays as a pre-registered robustness study |
-| Overlapping positions | Each cohort trades on its own: no netting across cohorts, no weight drift | Five overlapping daily sleeves held in shares (they drift), netted at the security level |
-| Execution costs | Commission, slippage, spread and an optional volume-based impact cost, charged as a round trip on each cohort's target weight | 10 bps one-way on net traded notional, plus a sensitivity grid |
-| Shorting and income | Price returns only: no dividends, short borrow cost or dividend payment-in-lieu | Daily total returns with dividends reinvested on the ex-date, so dividends owed on shorts come through the return; 50 bps a year borrow by calendar day |
-| Validation | Robustness scenarios, all reported | Purged walk-forward, an untouched lockbox, Newey-West inference, negative controls and coded decision rules |
-
-What carried over:
-
-- This repository reports every robustness scenario rather than the best one. QRL applies the same discipline through its experiment registry.
-- Round-trip costs charged per cohort overstate costs when signals persist. That is why QRL nets overlapping sleeves before charging costs.
-
-QRL's repository is currently private.
-
-### Known limitations at a glance
-
-- No netting across overlapping cohorts and no weight drift, so costs are conservative.
+- No netting across overlapping cohorts, so costs are conservative.
 - Price returns only: no dividends, short borrow cost or payment-in-lieu.
 - Deterministic sample and fixture data, not exchange-quality history.
 - One signal per run; outputs illustrate the mechanics and are not performance claims.
 
 Details are under [Current limitations](#current-limitations) below.
+
+## How returns and costs are measured
+
+- **Timing.** A timestamp marks a bar. A signal stamped with bar t may use information up to the end of bar t, so the default `delay_bars: 1` enters at the next bar's open. `delay_bars: 0` is only safe if the signal is known before its own bar opens.
+- **Overlapping holdings.** Each signal bar starts a cohort that holds `1 / holding_period_bars` of the gross leverage, so with H overlapping cohorts the book's gross leverage stays at the target.
+- **Marked to market.** Every position is marked at the close of each bar it is held, and the book's P&L is summed per bar. Booking a cohort's whole holding-period P&L on its exit bar instead would understate volatility, by up to sqrt(H) when the signal persists, and overstate the Sharpe ratio by the same factor; `tests/test_mark_to_market.py` checks this.
+- **Costs.** Commission and slippage per side, half the quoted spread at entry and at exit, each booked on the bar it is paid. An optional square-root impact term, off by default: per side, `impact_coefficient × daily volatility × sqrt(traded notional / ADV notional)`, with traded notional `|weight| × book_notional` and ADV notional the entry bar's ADV in shares times its entry price.
+- **Missing prices.** A fill without an entry or exit price (a halt, a delisting, a data gap) is dropped. The count is reported as `dropped_missing_price`, because a dropped exit can hide a loss.
 
 ## End-to-End Workflow
 
@@ -170,7 +159,7 @@ Run the default sample experiment:
 python cli.py run --experiment-name baseline
 ```
 
-Sample data is intentionally small and deterministic. It is suitable for demonstrating the pipeline and testing artifact generation, not for making a performance claim.
+The sample has 6 assets and 72 hourly bars, and its prices are built so that the signal ranks the next bars' returns. The run therefore prints a Sharpe ratio above 100. That number only shows that the pieces connect; `summary.md` says so in its first line.
 
 ## Generated artifacts
 
@@ -197,14 +186,14 @@ Common machine-readable outputs:
 
 ## Robustness Checks
 
-Each run also evaluates a small standardized robustness set designed for interview and portfolio discussion:
+Each run also evaluates a small standardized robustness set:
 
 - base case
 - execution delay `+1`
 - execution delay `+2`
 - fees `x2`
 - slippage `x2`
-- smaller-universe stress
+- smaller-universe stress (the assets with the most signal coverage over the whole sample; this uses full-sample information, so it is a stress test, not a tradable universe)
 
 The comparison outputs are written to:
 
@@ -239,7 +228,9 @@ See [GITHUB_PUBLISH_CHECKLIST.md](GITHUB_PUBLISH_CHECKLIST.md) for a short pre-p
 ## Current limitations
 
 - The execution model is intentionally simple and transparent, not a full production simulator.
-- Costs are charged as a full round trip on each cohort's target weight. Overlapping cohorts are not netted against each other and weights do not drift between entry and exit, so with persistent signals turnover and costs are overstated (a conservative bias).
+- Costs are charged as a full round trip on each cohort's target weight. Overlapping cohorts are not netted against each other, so with persistent signals turnover and costs are overstated (a conservative bias).
+- Price returns only: no dividends, short borrow cost or payment-in-lieu.
+- Fills with a missing entry or exit price are dropped and counted, not repaired.
 - `summary.md` lists every robustness scenario, with the base case as the primary result; no scenario is singled out as the best.
 - The current sample experiment uses deterministic fixture data rather than historical exchange-quality intraday data.
 - The upstream integration example uses a real `news-to-signal` signal export but a deterministic aligned market-data fixture.

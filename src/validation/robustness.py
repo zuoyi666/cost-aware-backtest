@@ -86,7 +86,8 @@ def build_robustness_scenarios(config: Dict[str, Any]) -> List[Dict[str, Any]]:
         group="universe",
         dimension="asset_limit_ratio",
         value=asset_limit_ratio,
-        description=f"Keep only the top {asset_limit_ratio:.0%} of assets by signal coverage.",
+        description=(f"Keep only the top {asset_limit_ratio:.0%} of assets by signal coverage over the whole sample "
+                     "(chosen with full-sample information: a stress test, not a tradable universe)."),
         updater=lambda cfg: cfg.setdefault("data", {}).update({"asset_limit_ratio": asset_limit_ratio}),
     )
     return scenarios
