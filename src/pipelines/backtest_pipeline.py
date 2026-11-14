@@ -74,7 +74,7 @@ def run_backtest_core(
         fills_df,
         cost_cfg=config.get("baseline", {}).get("costs", {}),
     )
-    portfolio_ts, turnover_ts = build_portfolio_timeseries(fills_df)
+    portfolio_ts, turnover_ts = build_portfolio_timeseries(fills_df, market_df)
     return {
         "weights": weights_df,
         "fills": fills_df,
@@ -163,6 +163,19 @@ def _robustness_lines(robustness_df: pd.DataFrame) -> list[str]:
     return lines
 
 
+SAMPLE_FIXTURE_NOTE = (
+    "> **Sample fixture.** The bundled sample has 6 assets and 72 hourly bars, and its prices are built so "
+    "that the signal ranks the next bars' returns. The metrics below only show that the pipeline connects; "
+    "they say nothing about performance."
+)
+
+
+def _uses_sample_fixture(config: Dict[str, Any]) -> bool:
+    data_cfg = config.get("data", {})
+    return (str(data_cfg.get("signal_path", "")).endswith("sample_signals.csv")
+            and str(data_cfg.get("market_data_path", "")).endswith("sample_market_data.csv"))
+
+
 def render_summary_markdown(
     config: Dict[str, Any],
     metrics_payload: Dict[str, Any],
@@ -175,6 +188,7 @@ def render_summary_markdown(
     lines = [
         "# Experiment Summary",
         "",
+        *([SAMPLE_FIXTURE_NOTE, ""] if _uses_sample_fixture(config) else []),
         f"- Run: `{run_cfg['run_name']}`",
         f"- Timestamp (UTC): `{run_cfg['timestamp_utc']}`",
         f"- Signal: `{features_cfg.get('signal_name', '')}`",
@@ -197,8 +211,12 @@ def render_summary_markdown(
         "",
         "## Cost Model Notes",
         "- Each cohort pays a full round trip on its target weight. Overlapping cohorts are not "
-        "netted against each other and weights do not drift between entry and exit, so with "
-        "persistent signals turnover and costs are overstated (a conservative bias).",
+        "netted against each other, so with persistent signals turnover and costs are overstated "
+        "(a conservative bias).",
+        "- P&L is marked to market on every bar a position is held; costs are booked on the bar "
+        "they are paid.",
+        f"- Fills dropped for a missing entry or exit price: "
+        f"`{metrics_payload['portfolio_diagnostics'].get('dropped_missing_price', 0)}`.",
         "",
         "## Portfolio Diagnostics",
         f"- fills: `{metrics_payload['portfolio_diagnostics']['fills']}`",
